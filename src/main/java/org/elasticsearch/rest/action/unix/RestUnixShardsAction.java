@@ -41,11 +41,15 @@ public class RestUnixShardsAction extends BaseRestHandler {
                     StringBuilder out = new StringBuilder();
                     for (Iterator<ShardRouting> it = clusterStateResponse.getState().getRoutingTable().allShards().iterator(); it.hasNext(); ) {
                         ShardRouting shard = it.next();
+                        String pri = "r";
+                        if (shard.primary()) {
+                            pri = "p";
+                        }
                         out.append(shard.index());
                         out.append(" ");
                         out.append(shard.id());
                         out.append(" ");
-                        out.append(shard.primary());
+                        out.append(pri);
                         out.append("\n");
                     }
                     channel.sendResponse(new StringRestResponse(status, out.toString().trim()));
