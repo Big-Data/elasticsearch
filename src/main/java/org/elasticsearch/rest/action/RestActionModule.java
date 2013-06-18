@@ -83,8 +83,12 @@ import org.elasticsearch.rest.action.search.RestMultiSearchAction;
 import org.elasticsearch.rest.action.search.RestSearchAction;
 import org.elasticsearch.rest.action.search.RestSearchScrollAction;
 import org.elasticsearch.rest.action.suggest.RestSuggestAction;
+
 import org.elasticsearch.rest.action.termvector.RestTermVectorAction;
+
 import org.elasticsearch.rest.action.update.RestUpdateAction;
+
+import org.elasticsearch.rest.action.unix.RestUnixShardsAction;
 
 import java.util.List;
 
@@ -180,5 +184,7 @@ public class RestActionModule extends AbstractModule {
         bind(RestMoreLikeThisAction.class).asEagerSingleton();
 
         bind(RestExplainAction.class).asEagerSingleton();
+
+        bind(RestUnixShardsAction.class).asEagerSingleton();
     }
 }
