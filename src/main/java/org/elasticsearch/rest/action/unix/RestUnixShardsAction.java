@@ -3,6 +3,9 @@ package org.elasticsearch.rest.action.unix;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
+import org.elasticsearch.action.admin.indices.status.IndicesStatusRequest;
+import org.elasticsearch.action.admin.indices.status.IndicesStatusResponse;
+import org.elasticsearch.action.admin.indices.status.ShardStatus;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.inject.Inject;
@@ -29,38 +32,35 @@ public class RestUnixShardsAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestChannel channel) {
-        ClusterStateRequest clusterStateRequest = new ClusterStateRequest();
-        clusterStateRequest.listenerThreaded(false);
-        clusterStateRequest.filterMetaData(true);
-        clusterStateRequest.local(true);
-        client.admin().cluster().state(clusterStateRequest, new ActionListener<ClusterStateResponse>() {
+        final StringBuilder out = new StringBuilder();
+        IndicesStatusRequest indicesStatusRequest = new IndicesStatusRequest();
+        client.admin().indices().status(indicesStatusRequest, new ActionListener<IndicesStatusResponse>() {
             @Override
-            public void onResponse(ClusterStateResponse clusterStateResponse) {
+            public void onResponse(IndicesStatusResponse indicesStatusResponse) {
                 RestStatus status = RestStatus.OK;
-                try {
-                    StringBuilder out = new StringBuilder();
-                    for (Iterator<ShardRouting> it = clusterStateResponse.getState().getRoutingTable().allShards().iterator(); it.hasNext(); ) {
-                        ShardRouting shard = it.next();
-                        String pri = "r";
-                        if (shard.primary()) {
-                            pri = "p";
-                        }
-                        out.append(shard.index());
-                        out.append(" ");
-                        out.append(shard.id());
-                        out.append(" ");
-                        out.append(pri);
-                        out.append("\n");
+                for (ShardStatus shard : indicesStatusResponse.getShards()) {
+                    String pri = "r";
+                    if (shard.getShardRouting().primary()) {
+                        pri = "p";
                     }
-                    channel.sendResponse(new StringRestResponse(status, out.toString().trim()));
-                } catch (Throwable e) {
-                    try {
-                        channel.sendResponse(new XContentThrowableRestResponse(request, e));
+                    out.append(shard.getIndex());
+                    out.append(" ");
+                    out.append(shard.getState().id());
+                    out.append(" ");
+                    out.append(pri);
+                    out.append(" ");
+                    out.append(shard.getShardRouting().state());
+                    out.append(" ");
+                    out.append(shard.getDocs().getNumDocs());
+                    out.append(" ");
+                    out.append(shard.getStoreSize().toString());
+                    out.append(" ");
+                    out.append(shard.getStoreSize().bytes());
+                    out.append("\n");
 
-                    } catch (Exception e1) {
-                        logger.warn("Failed to send response", e);
-                    }
                 }
+                channel.sendResponse(new StringRestResponse(status, out.toString().trim()));
+
             }
 
             @Override
