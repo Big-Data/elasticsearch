@@ -40,37 +40,13 @@ public class RestUnixShardsAction extends BaseRestHandler {
     public void handleRequest(final RestRequest request, final RestChannel channel) {
         final StringBuilder out = new StringBuilder();
 
-        final Map<String, RoutingNode> nodes = newHashMap();
-
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest();                                                                                                     clusterStateRequest.listenerThreaded(false);
         clusterStateRequest.filterMetaData(true);
         clusterStateRequest.local(true);
 
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        client.admin().cluster().state(clusterStateRequest, new ActionListener<ClusterStateResponse>() {
-            @Override
-            public void onResponse(ClusterStateResponse clusterStateResponse) {
-                Map<String, RoutingNode> m = ImmutableMap.copyOf(clusterStateResponse.getState().routingNodes().nodesToShards());
-
-                for (Map.Entry<String,RoutingNode> e : m.entrySet()) {
-                    nodes.put(e.getKey(), e.getValue());
-                }
-
-                latch.countDown();
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                logger.warn("wtf", e);
-            }
-        });
-
-        try {
-            latch.await();
-        } catch (Exception e) {
-            logger.warn("not getting response from cluster state request", e);
-        }
+        final Map<String, RoutingNode> nodes = ImmutableMap.copyOf(client.admin().cluster()
+                .state(clusterStateRequest).actionGet()
+                .getState().getRoutingNodes().nodesToShards());
 
         IndicesStatusRequest indicesStatusRequest = new IndicesStatusRequest();
         client.admin().indices().status(indicesStatusRequest, new ActionListener<IndicesStatusResponse>() {
